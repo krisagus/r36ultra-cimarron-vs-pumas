@@ -154,6 +154,7 @@ class Fighter:
                 jump_pressed, punch_pressed, kick_pressed, special_pressed = False, False, False, False
                 is_down, is_forward = False, False
                 
+                # --- INPUTS DEL JUGADOR ---
                 if key[pygame.K_a]: dx = -self.speed; is_forward = not self.facing_left
                 if key[pygame.K_d]: dx = self.speed; is_forward = self.facing_left
                 if key[pygame.K_s]: is_down = True
@@ -179,6 +180,32 @@ class Fighter:
                     if joystick.get_button(5) or joystick.get_button(7): self.shielding = True
                     if (joystick.get_button(4) and joystick.get_button(5)) and self.special_cooldown == 0:
                         self.start_cannonball(); punch_pressed = kick_pressed = special_pressed = False
+
+                # --- INPUTS DE LA IA ---
+                if ai:
+                    dist_x = target.rect.centerx - self.rect.centerx
+                    # Acercarse al enemigo
+                    if abs(dist_x) > 75:
+                        dx = self.speed if dist_x > 0 else -self.speed
+                        is_forward = True
+                    
+                    # Probabilidades de ataque
+                    r = random.random()
+                    if r < 0.04: punch_pressed = True
+                    elif r < 0.06: kick_pressed = True
+                    elif r < 0.08 and self.special_cooldown == 0: special_pressed = True
+                    elif r < 0.09: self.blocking = True
+                    elif r < 0.11 and self.special_cooldown == 0: self.start_cannonball()
+                    elif r < 0.13 and self.special_cooldown == 0: 
+                        is_down = True; special_pressed = True # Gancho
+                    
+                    # Intentar Suplex si está cerca
+                    if abs(dist_x) < 85 and r < 0.18:
+                        punch_pressed = True; is_forward = True 
+                        
+                    # Saltar aleatoriamente
+                    if random.random() < 0.02 and self.rect.bottom >= floor_y:
+                        jump_pressed = True
 
                 if self.shielding or self.blocking: dx = 0; punch_pressed = kick_pressed = special_pressed = False
 
