@@ -80,6 +80,18 @@ class Fighter:
                 self.fatality_img_left = pygame.transform.flip(img_f, True, False)
             except: pass
 
+        
+        # Cargar Sprite de Puñetazo
+        self.punch_img_right, self.punch_img_left = None, None
+        punch_path = f"assets/{char_name.lower()}_punch.png"
+        if os.path.exists(punch_path):
+            try:
+                img_p = pygame.image.load(punch_path).convert_alpha()
+                img_p = pygame.transform.scale(img_p, (280, 280))
+                self.punch_img_right = img_p
+                self.punch_img_left = pygame.transform.flip(img_p, True, False)
+            except: pass
+
         self.rect = pygame.Rect(x, y, 100, 200)
         self.vel_y = 0; self.speed = 10; self.jump_power = -35; self.gravity = 2.5; self.hp = 100
         self.attacking = False; self.attack_cooldown = 0; self.action = 0; self.projectiles = []
