@@ -68,6 +68,18 @@ class Fighter:
                 self.image_evo_left = pygame.transform.flip(img_evo, True, False)
             except: pass
 
+        # Cargar Sprite de Fatality específico
+        self.fatality_img_right, self.fatality_img_left = None, None
+        fatality_path = f"assets/{char_name.lower()}_fatality.png"
+        if os.path.exists(fatality_path):
+            try:
+                img_f = pygame.image.load(fatality_path).convert_alpha()
+                # Aumentamos un poco el tamaño para el impacto
+                img_f = pygame.transform.scale(img_f, (320, 320)) 
+                self.fatality_img_right = img_f
+                self.fatality_img_left = pygame.transform.flip(img_f, True, False)
+            except: pass
+
         self.rect = pygame.Rect(x, y, 100, 200)
         self.vel_y = 0; self.speed = 10; self.jump_power = -35; self.gravity = 2.5; self.hp = 100
         self.attacking = False; self.attack_cooldown = 0; self.action = 0; self.projectiles = []
@@ -115,10 +127,23 @@ class Fighter:
 
     def move(self, screen_width, screen_height, floor_y, joystick, target, is_local=True, net_data=None, ai=False, finish_him_mode=False):
         if self.is_dead: return
+        
+        # Secuencia Cinematica de Fatality
         if self.doing_fatality:
             self.fatality_timer += 1
-            if self.fatality_timer > 30: target.rect.y -= 45; target.rect.x += random.randint(-15, 15)
+            if self.fatality_timer == 1:
+                play_sound('jump')
+            if self.fatality_timer == 35: # Punto de impacto
+                play_sound('hit')
+                play_sound('hit') # Doble para brutalidad
+                target.take_damage(100, is_physical=True)
+            if self.fatality_timer > 35:
+                # Enemigo sale volando hacia atras
+                target.vel_y = -15
+                target.rect.x += -25 if self.facing_left else 25
+                target.rect.y += target.vel_y
             return
+
         if self.suplexed_by: return
 
         dx, dy = 0, 0
@@ -154,7 +179,6 @@ class Fighter:
                 jump_pressed, punch_pressed, kick_pressed, special_pressed = False, False, False, False
                 is_down, is_forward = False, False
                 
-                # --- INPUTS DEL JUGADOR ---
                 if key[pygame.K_a]: dx = -self.speed; is_forward = not self.facing_left
                 if key[pygame.K_d]: dx = self.speed; is_forward = self.facing_left
                 if key[pygame.K_s]: is_down = True
@@ -181,31 +205,23 @@ class Fighter:
                     if (joystick.get_button(4) and joystick.get_button(5)) and self.special_cooldown == 0:
                         self.start_cannonball(); punch_pressed = kick_pressed = special_pressed = False
 
-                # --- INPUTS DE LA IA ---
-                if ai:
+                if finish_him_mode and special_pressed:
+                    self.doing_fatality = True
+                    self.fatality_timer = 0
+                    return
+
+                if ai and not finish_him_mode:
                     dist_x = target.rect.centerx - self.rect.centerx
-                    # Acercarse al enemigo
-                    if abs(dist_x) > 75:
-                        dx = self.speed if dist_x > 0 else -self.speed
-                        is_forward = True
-                    
-                    # Probabilidades de ataque
+                    if abs(dist_x) > 75: dx = self.speed if dist_x > 0 else -self.speed; is_forward = True
                     r = random.random()
                     if r < 0.04: punch_pressed = True
                     elif r < 0.06: kick_pressed = True
                     elif r < 0.08 and self.special_cooldown == 0: special_pressed = True
                     elif r < 0.09: self.blocking = True
                     elif r < 0.11 and self.special_cooldown == 0: self.start_cannonball()
-                    elif r < 0.13 and self.special_cooldown == 0: 
-                        is_down = True; special_pressed = True # Gancho
-                    
-                    # Intentar Suplex si está cerca
-                    if abs(dist_x) < 85 and r < 0.18:
-                        punch_pressed = True; is_forward = True 
-                        
-                    # Saltar aleatoriamente
-                    if random.random() < 0.02 and self.rect.bottom >= floor_y:
-                        jump_pressed = True
+                    elif r < 0.13 and self.special_cooldown == 0: is_down = True; special_pressed = True
+                    if abs(dist_x) < 85 and r < 0.18: punch_pressed = True; is_forward = True 
+                    if random.random() < 0.02 and self.rect.bottom >= floor_y: jump_pressed = True
 
                 if self.shielding or self.blocking: dx = 0; punch_pressed = kick_pressed = special_pressed = False
 
@@ -272,14 +288,43 @@ class Fighter:
         if self.is_dead and not self.doing_fatality:
             pygame.draw.rect(surface, (50, 0, 0), pygame.Rect(self.rect.x, self.rect.bottom - 40, 180, 40)); return
 
+        # Logica Cinemática
+        shake_x = 0
+        if self.doing_fatality:
+            # Oscurecer fondo
+            dim = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+            dim.fill((0, 0, 0, 150))
+            surface.blit(dim, (0,0))
+            
+            # Dibujar Muro FIAD Dinámico
+            try:
+                if not hasattr(self, 'prop_muro'):
+                    self.prop_muro = pygame.image.load("assets/prop_muro.png").convert_alpha()
+                # Posicionar muro detras del rival
+                wall_x = self.rect.right + 50 if not self.facing_left else self.rect.left - 50 - self.prop_muro.get_width()
+                if self.fatality_timer > 35: shake_x = random.randint(-15, 15) # CAMERA SHAKE IMPACTO
+                surface.blit(self.prop_muro, (wall_x + shake_x, self.rect.bottom - self.prop_muro.get_height()))
+            except: pass
+            
         offset_x = random.randint(-8, 8) if (self.is_dizzy or self.is_hooked) else 0
-        draw_rect = self.rect.copy(); draw_rect.x += offset_x
+        draw_rect = self.rect.copy(); draw_rect.x += offset_x + shake_x
+        
         current_img_left = self.image_evo_left if (self.is_evolved and self.image_evo_left) else self.image_left
         current_img_right = self.image_evo_right if (self.is_evolved and self.image_evo_right) else self.image_right
+        
         draw_rect.y -= (65 if self.is_evolved else 50) if current_img_right else 0
         if self.is_evolved: draw_rect.x -= 15
+        
         img_to_draw = current_img_left if self.facing_left else current_img_right
         
+        if self.doing_fatality and self.fatality_img_right:
+            # Reemplazar con Sprite de Fatality
+            if self.fatality_timer > 20:
+                img_to_draw = self.fatality_img_left if self.facing_left else self.fatality_img_right
+                # Ajustar tamaño gigante del sprite de impacto
+                draw_rect.y -= 70
+                draw_rect.x -= 35
+                
         if self.suplexed_by and img_to_draw: img_to_draw = pygame.transform.flip(img_to_draw, False, True)
             
         if self.cannonball_active:
