@@ -10,6 +10,7 @@ try:
     from fighter import Fighter
     from network_manager import NetworkManager
     from telemetry import CombatTelemetry
+    import gallery
 
     pygame.display.init()
     pygame.font.init()
@@ -111,7 +112,7 @@ try:
     app_running = play_intro(screen, clock)
 
     while app_running:
-        menu_options = ["1. Jugar vs CPU (3v3)", "2. Crear Partida", "3. Unirse a Partida", "4. Salir"]
+        menu_options = ["1. Jugar vs CPU (3v3)", "2. Crear Partida", "3. Unirse a Partida", "4. Galeria de Arte", "5. Salir"]
         selected = 0
         in_menu = True
         game_mode = "CPU"
@@ -159,7 +160,8 @@ try:
                     if selected == 0: game_mode = "CPU"; in_menu = False
                     elif selected == 1: game_mode = "HOST"; in_menu = False
                     elif selected == 2: game_mode = "CLIENT"; in_menu = False
-                    elif selected == 3: app_running = False; in_menu = False
+                    elif selected == 3: gallery.run_gallery(screen, joystick)
+                    elif selected == 4: app_running = False; in_menu = False
 
         if not app_running: break
 
