@@ -16,7 +16,8 @@ try:
     pygame.joystick.init()
     
     try:
-        pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
+        pygame.mixer.pre_init(44100, -16, 2, 1024)
+    pygame.mixer.init()
     except:
         pass
 
