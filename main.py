@@ -17,7 +17,7 @@ try:
     
     try:
         pygame.mixer.pre_init(44100, -16, 2, 1024)
-    pygame.mixer.init()
+        pygame.mixer.init()
     except:
         pass
 
