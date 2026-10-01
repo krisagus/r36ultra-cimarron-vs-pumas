@@ -52,62 +52,7 @@ try:
             except:
                 pass
 
-    def play_intro(screen, clock):
-        intro_dir = "assets/intro_frames"
-        intro_audio = "assets/intro.wav"
-        if not os.path.exists(intro_dir):
-            return True
-
-        frame_files = sorted([f for f in os.listdir(intro_dir) if f.lower().endswith((".jpg", ".jpeg", ".png"))])
-        if not frame_files:
-            return True
-
-        audio_started = False
-        if os.path.exists(intro_audio) and pygame.mixer.get_init():
-            try:
-                pygame.mixer.music.load(intro_audio)
-                pygame.mixer.music.play()
-                audio_started = True
-            except Exception:
-                pass
-
-        intro_fps = 15
-        intro_clock = pygame.time.Clock()
-
-        for frame_file in frame_files:
-            frame_path = os.path.join(intro_dir, frame_file)
-            try:
-                frame_img = pygame.image.load(frame_path).convert()
-                frame_img = pygame.transform.scale(frame_img, (WIDTH, HEIGHT))
-                screen.blit(frame_img, (0, 0))
-                pygame.display.flip()
-            except Exception:
-                pass
-
-            intro_clock.tick(intro_fps)
-
-            skip = False
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    if audio_started:
-                        pygame.mixer.music.stop()
-                    return False
-                if event.type == pygame.KEYDOWN:
-                    skip = True
-                    break
-                if event.type == pygame.JOYBUTTONDOWN:
-                    skip = True
-                    break
-
-            if skip:
-                break
-
-        if audio_started:
-            pygame.mixer.music.stop()
-        pygame.event.clear()
-        return True
-
-    app_running = play_intro(screen, clock)
+    app_running = True
 
     while app_running:
         menu_options = ["1. Jugar vs CPU (3v3)", "2. Crear Partida", "3. Unirse a Partida", "4. Salir"]
